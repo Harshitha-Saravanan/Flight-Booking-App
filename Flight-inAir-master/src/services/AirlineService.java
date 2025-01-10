@@ -1,45 +1,51 @@
-package services;
+const AirlineAlreadyExist = require('./exceptions/AirlineAlreadyExist');
+const AirlineNotFound = require('./exceptions/AirlineNotFound');
+const FlightAlreadyExist = require('./exceptions/FlightAlreadyExist');
+const FlightNotFound = require('./exceptions/FlightNotFound');
 
-import exceptions.AirlineAlreadyExist;
-import exceptions.AirlineNotFound;
-import exceptions.FlightAlreadyExist;
-import exceptions.FlightNotFound;
-import models.Airline;
-import models.Flight;
-import repositories.AirlineRepository;
-
-public class AirlineService {
-    private final AirlineRepository airlineRepository;
-    private final FlightService flightService;
-
-    public AirlineService(AirlineRepository airlineRepository, FlightService flightService) {
+class AirlineService {
+    constructor(airlineRepository, flightService) {
         this.airlineRepository = airlineRepository;
         this.flightService = flightService;
     }
 
-    public boolean isRegistered(Long id) {
-        return airlineRepository.findById(id).isPresent();
+    
+    isRegistered(id) {
+        const airline = this.airlineRepository.findById(id);
+        return airline !== undefined; 
     }
 
-    public Airline register(Airline airline) throws AirlineAlreadyExist {
-        if (isRegistered(airline.getId())) {
-            throw new AirlineAlreadyExist("'" + airline.getName() + "'" + " Already exist");
+    
+    async register(airline) {
+        if (this.isRegistered(airline.getId())) {
+            throw new AirlineAlreadyExist(`'${airline.getName()}' already exists`);
         }
 
-        return airlineRepository.save(airline);
+        return this.airlineRepository.save(airline);
     }
 
-    public Flight registerFlight(Flight flight) throws FlightAlreadyExist, AirlineNotFound {
-        if (!isRegistered(flight.getAirline().getId())) {
-            throw new AirlineNotFound("'" + flight.getAirline() + "'" + " Airline not found");
+    
+    async registerFlight(flight) {
+        const airlineId = flight.getAirline().getId();
+
+        if (!this.isRegistered(airlineId)) {
+            throw new AirlineNotFound(`'${flight.getAirline().getName()}' Airline not found`);
         }
 
-        Flight updatedFlight = flightService.register(flight);
-        updatedFlight.getAirline().addFlight(updatedFlight);
+        
+        const updatedFlight = await this.flightService.register(flight);
+        updatedFlight.getAirline().addFlight(updatedFlight); 
         return updatedFlight;
     }
 
-    public void addService(Long flightId, String service) throws FlightNotFound {
-        flightService.addService(flightId, service);
+    
+    async addService(flightId, service) {
+        try {
+            await this.flightService.addService(flightId, service);
+        } catch (error) {
+            throw new FlightNotFound(`Flight with ID ${flightId} not found`);
+        }
     }
 }
+
+module.exports = AirlineService;
