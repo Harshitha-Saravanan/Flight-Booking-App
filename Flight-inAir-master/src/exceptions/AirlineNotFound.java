@@ -1,10 +1,9 @@
-package exceptions;
-
-public class AirlineNotFound extends Exception {
-    public AirlineNotFound() {
-    }
-
-    public AirlineNotFound(String message) {
-        super(message);
+class AirlineNotFoundError extends Error {
+    constructor(message) {
+        super(message); 
+        this.name = this.constructor.name; 
+        this.statusCode = 404; 
     }
 }
+
+module.exports = AirlineNotFoundError;
