@@ -1,40 +1,23 @@
-package models;
+const Airline = require('./Airline'); 
 
-import java.util.HashSet;
-import java.util.Objects;
-import java.util.Set;
 
-public class Airline extends BaseModel {
-    private final String name;
-    private final Set<Flight> flights;
+const flight1 = { flightNumber: 'A101', destination: 'NYC' };
+const flight2 = { flightNumber: 'A102', destination: 'LA' };
 
-    public Airline(String name) {
-        this.name = name;
-        flights = new HashSet<>();
-    }
 
-    public String getName() {
-        return name;
-    }
+const airline = new Airline('Jet Airways');
 
-    public Set<Flight> getFlights() {
-        return flights;
-    }
 
-    public void addFlight(Flight flight) {
-        flights.add(flight);
-    }
+airline.addFlight(flight1);
+airline.addFlight(flight2);
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        Airline airline = (Airline) o;
-        return Objects.equals(name, airline.name);
-    }
 
-    @Override
-    public int hashCode() {
-        return Objects.hash(name);
-    }
-}
+
+
+console.log(airline.getFlights()); 
+
+const airline2 = new Airline('Jet Airways');
+console.log(airline.equals(airline2)); 
+
+
+console.log(airline.hashCode()); 
