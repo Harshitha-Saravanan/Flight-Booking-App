@@ -1,63 +1,58 @@
-import exceptions.AirlineAlreadyExist;
-import exceptions.AirlineNotFound;
-import exceptions.FlightAlreadyExist;
-import exceptions.FlightNotFound;
-import models.Airline;
-import models.Flight;
-import repositories.AirlineRepository;
-import repositories.FlightRepository;
-import services.AirlineService;
-import services.FlightSearchService;
-import services.FlightService;
+class Driver {
+    static async main() {
+        
+        const flightRepository = new FlightRepository();
+        const flightService = new FlightService(flightRepository);
 
-public class Driver {
-    public static void main(String[] args) {
-        final FlightRepository flightRepository = new FlightRepository();
-        final FlightService flightService = new FlightService(flightRepository);
-
-        final AirlineRepository airlineRepository = new AirlineRepository();
-        final AirlineService airlineService = new AirlineService(airlineRepository, flightService);
+        const airlineRepository = new AirlineRepository();
+        const airlineService = new AirlineService(airlineRepository, flightService);
 
         try {
-            Airline jetAir = airlineService.register(new Airline("JetAir"));
-            Airline delta = airlineService.register(new Airline("Delta"));
-            Airline indigo = airlineService.register(new Airline("IndiGo"));
+            
+            const jetAir = await airlineService.register(new Airline("JetAir"));
+            const delta = await airlineService.register(new Airline("Delta"));
+            const indigo = await airlineService.register(new Airline("IndiGo"));
 
             try {
-                Flight JA_DEL_BLR = airlineService.registerFlight(new Flight("JA", "DEL", "BLR", 500, jetAir));
-                Flight JA_BLR_LON = airlineService.registerFlight(new Flight("JA", "BLR", "LON", 1000, jetAir));
-                Flight JA_LON_NYC = airlineService.registerFlight(new Flight("JA", "LON", "NYC", 2000, jetAir));
+               
+                const JA_DEL_BLR = await airlineService.registerFlight(new Flight("JA", "DEL", "BLR", 500, jetAir));
+                const JA_BLR_LON = await airlineService.registerFlight(new Flight("JA", "BLR", "LON", 1000, jetAir));
+                const JA_LON_NYC = await airlineService.registerFlight(new Flight("JA", "LON", "NYC", 2000, jetAir));
 
-                Flight DL_DEL_LON = airlineService.registerFlight(new Flight("DL", "DEL", "LON", 2000, delta));
-                Flight DL_LON_NYC = airlineService.registerFlight(new Flight("DL", "LON", "NYC", 2000, delta));
+                const DL_DEL_LON = await airlineService.registerFlight(new Flight("DL", "DEL", "LON", 2000, delta));
+                const DL_LON_NYC = await airlineService.registerFlight(new Flight("DL", "LON", "NYC", 2000, delta));
 
-                Flight IG_LON_NYC = airlineService.registerFlight(new Flight("IG", "LON", "NYC", 2500, indigo));
-                Flight IG_DEL_BLR = airlineService.registerFlight(new Flight("IG", "DEL", "BLR", 600, indigo));
-                Flight IG_BLR_PAR = airlineService.registerFlight(new Flight("IG", "BLR", "PAR", 800, indigo));
-                Flight IG_PAR_LON = airlineService.registerFlight(new Flight("IG", "PAR", "LON", 300, indigo));
+                const IG_LON_NYC = await airlineService.registerFlight(new Flight("IG", "LON", "NYC", 2500, indigo));
+                const IG_DEL_BLR = await airlineService.registerFlight(new Flight("IG", "DEL", "BLR", 600, indigo));
+                const IG_BLR_PAR = await airlineService.registerFlight(new Flight("IG", "BLR", "PAR", 800, indigo));
+                const IG_PAR_LON = await airlineService.registerFlight(new Flight("IG", "PAR", "LON", 300, indigo));
 
                 try {
-                    airlineService.addService(IG_LON_NYC.getId(), "meal");
-                    airlineService.addService(IG_DEL_BLR.getId(), "meal");
-                    airlineService.addService(IG_BLR_PAR.getId(), "meal");
-                    airlineService.addService(IG_PAR_LON.getId(), "meal");
-                } catch (FlightNotFound e) {
-                    System.out.println(e.getMessage());
-                    throw new RuntimeException(e);
+                    
+                    await airlineService.addService(IG_LON_NYC.getId(), "meal");
+                    await airlineService.addService(IG_DEL_BLR.getId(), "meal");
+                    await airlineService.addService(IG_BLR_PAR.getId(), "meal");
+                    await airlineService.addService(IG_PAR_LON.getId(), "meal");
+                } catch (e) {
+                    console.log(e.message);
+                    throw new Error(e);
                 }
-            } catch (FlightAlreadyExist | AirlineNotFound e) {
-                System.out.println(e.getMessage());
-                throw new RuntimeException(e);
+            } catch (e) {
+                console.log(e.message);
+                throw new Error(e);
             }
-        } catch (AirlineAlreadyExist e) {
-            System.out.println(e.getMessage());
-            throw new RuntimeException(e);
+        } catch (e) {
+            console.log(e.message);
+            throw new Error(e);
         }
 
-        final FlightSearchService flightSearchService = new FlightSearchService(flightService);
+        
+        const flightSearchService = new FlightSearchService(flightService);
 
-        flightSearchService.search("DEL", "NYC");
-
-        flightSearchService.search("DEL", "NYC", "meal");
+        await flightSearchService.search("DEL", "NYC");
+        await flightSearchService.search("DEL", "NYC", "meal");
     }
 }
+
+
+Driver.main().catch(console.error);
