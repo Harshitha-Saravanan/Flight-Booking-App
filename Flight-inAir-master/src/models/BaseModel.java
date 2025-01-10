@@ -1,13 +1,17 @@
-package models;
-
-public class BaseModel {
-    protected Long id;
-
-    public Long getId() {
-        return id;
+class BaseModel {
+    constructor(id) {
+        this._id = id || null; 
     }
 
-    public void setId(Long id) {
-        this.id = id;
+    
+    getId() {
+        return this._id;
+    }
+
+    
+    setId(id) {
+        this._id = id;
     }
 }
+
+module.exports = BaseModel;
