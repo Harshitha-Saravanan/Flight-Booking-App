@@ -1,197 +1,168 @@
-package services;
-
-import models.Flight;
-
-import java.util.*;
-import java.util.stream.Collectors;
-
-public class FlightSearchService {
-    private final Map<String, List<Flight>> flightGraph;
-
-    public FlightSearchService(FlightService flightService) {
+class FlightSearchService {
+    constructor(flightService) {
         this.flightGraph = flightService.getFlights();
     }
 
-    public void search(String origin, String destination, String... services) {
-        Set<String> serviceSet = new HashSet<>(Arrays.asList(services));
+    search(origin, destination, ...services) {
+        const serviceSet = new Set(services);
+        let flightsWithMinHops = this.searchByHops(origin, destination, serviceSet);
+        let totalCost, totalHops;
 
-        List<List<Flight>> flightsWithMinHops = searchByHops(origin, destination, serviceSet);
-
-        double totalCost;
-        int totalHops;
-
-        for (List<Flight> list : flightsWithMinHops) {
-            System.out.print("Route with Minimum Hops: ");
-
+        
+        for (let list of flightsWithMinHops) {
+            console.log("Route with Minimum Hops: ");
             totalCost = 0;
             totalHops = 0;
 
-            for (Flight flight : list) {
-                System.out.print(flight.getOrigin() + " to " + flight.getDestination() + " via " + flight.getAirline().getName() + " for " + flight.getFare() + " ");
+            for (let flight of list) {
+                console.log(`${flight.getOrigin()} to ${flight.getDestination()} via ${flight.getAirline().getName()} for ${flight.getFare()} `);
                 totalCost += flight.getFare();
                 totalHops++;
             }
 
-            System.out.print("Total Flights = " + totalHops + " ");
-            System.out.print("Total Cost = " + totalCost);
-
-            System.out.println();
+            console.log(`Total Flights = ${totalHops} Total Cost = ${totalCost}`);
         }
 
-        List<List<Flight>> flightsWithCheapestRoute = searchByCost(origin, destination, serviceSet);
-
-        for (List<Flight> list : flightsWithCheapestRoute) {
-            System.out.print("Cheapest Route: ");
-
+        
+        let flightsWithCheapestRoute = this.searchByCost(origin, destination, serviceSet);
+        for (let list of flightsWithCheapestRoute) {
+            console.log("Cheapest Route: ");
             totalCost = 0;
             totalHops = 0;
 
-            for (Flight flight : list) {
-                System.out.print(flight.getOrigin() + " to " + flight.getDestination() + " via " + flight.getAirline().getName() + " for " + flight.getFare() + " ");
+            for (let flight of list) {
+                console.log(`${flight.getOrigin()} to ${flight.getDestination()} via ${flight.getAirline().getName()} for ${flight.getFare()} `);
                 totalCost += flight.getFare();
                 totalHops++;
             }
 
-            System.out.print("Total Flights = " + totalHops + " ");
-            System.out.print("Total Cost = " + totalCost);
-
-            System.out.println();
+            console.log(`Total Flights = ${totalHops} Total Cost = ${totalCost}`);
         }
     }
 
-    private OptionalDouble getMinimumFare(String origin, String destination, Set<String> services) {
-        String source = "null@" + origin;
+    getMinimumFare(origin, destination, services) {
+        const source = `null@${origin}`;
+        const minHeap = new Map();
+        minHeap.set(source, 0);
+        const fares = new Map();
+        fares.set(source, 0);
 
-        Queue<Map.Entry<String, Double>> minHeap = new PriorityQueue<>(Map.Entry.comparingByValue());
-        minHeap.offer(new AbstractMap.SimpleEntry<>(source, 0d));
+        while (minHeap.size) {
+            const [currentNode, currentFare] = [...minHeap.entries()].shift();
+            const currentDestination = currentNode.split("@")[1];
 
-        Map<String, Double> fares = new HashMap<>();
-        fares.put(source, 0d);
+            if (currentDestination === destination) continue;
 
-        while (!minHeap.isEmpty()) {
-            Map.Entry<String, Double> currentNode = minHeap.poll();
-            String currentDestination = currentNode.getKey().split("@")[1];
-            Double currentFare = currentNode.getValue();
+            for (let nbr of this.flightGraph.get(currentDestination) || []) {
+                if (services.size && !this.containsAllServices(nbr.getServices(), services)) continue;
 
-            if (currentDestination.equals(destination)) continue;
+                const nextDestination = `${nbr.getAirline().getName()}@${nbr.getDestination()}`;
+                const nextFare = currentFare + nbr.getFare();
 
-            for (Flight nbr : flightGraph.getOrDefault(currentDestination, new ArrayList<>())) {
-                if (!services.isEmpty() && !nbr.getServices().containsAll(services)) continue;
-
-                String nextDestination = nbr.getAirline().getName() + "@" + nbr.getDestination();
-                Double nextFare = currentFare + nbr.getFare();
-
-                if (nextFare < fares.getOrDefault(nextDestination, Double.MAX_VALUE)) {
-                    fares.put(nextDestination, nextFare);
-                    minHeap.offer(new AbstractMap.SimpleEntry<>(nextDestination, nextFare));
+                if (nextFare < fares.get(nextDestination) || !fares.has(nextDestination)) {
+                    fares.set(nextDestination, nextFare);
+                    minHeap.set(nextDestination, nextFare);
                 }
             }
         }
 
-        return fares.keySet().stream().filter(d -> d.contains(destination)).mapToDouble(fares::get).min();
+        return [...fares.keys()].filter(d => d.includes(destination)).map(d => fares.get(d));
     }
 
-    private List<List<Flight>> searchByCost(String origin, String destination, Set<String> services) {
-        OptionalDouble minimumFareOptional = getMinimumFare(origin, destination, services);
-        if (!minimumFareOptional.isPresent()) return new ArrayList<>();
-
-        List<List<Flight>> flights = new ArrayList<>();
-        searchByCost(origin, destination, minimumFareOptional.getAsDouble(), services, new HashSet<>(), new ArrayList<>(), flights);
-
-        OptionalInt minOptional = flights.stream().mapToInt(List::size).min();
-        if (!minOptional.isPresent()) return new ArrayList<>();
-
-        int minHops = minOptional.getAsInt();
-        return flights.stream().filter(flightNodes -> flightNodes.size() == minHops).collect(Collectors.toList());
+    containsAllServices(flightServices, requiredServices) {
+        return [...requiredServices].every(service => flightServices.has(service));
     }
 
-    private void searchByCost(String origin, String destination, double minimumFare, Set<String> services, Set<String> visited, List<Flight> list, List<List<Flight>> flights) {
-        if (origin.equals(destination) && minimumFare == 0) {
-            flights.add(new ArrayList<>(list));
+    searchByCost(origin, destination, services) {
+        const minimumFare = this.getMinimumFare(origin, destination, services);
+        if (!minimumFare || minimumFare.length === 0) return [];
+
+        let flights = [];
+        this.searchByCostRecursive(origin, destination, minimumFare[0], services, new Set(), [], flights);
+
+        const minHops = Math.min(...flights.map(f => f.length));
+        return flights.filter(flightNodes => flightNodes.length === minHops);
+    }
+
+    searchByCostRecursive(origin, destination, minimumFare, services, visited, list, flights) {
+        if (origin === destination && minimumFare === 0) {
+            flights.push([...list]);
             return;
         }
+
         if (minimumFare <= 0) return;
 
-        for (Flight nbr : flightGraph.getOrDefault(origin, new ArrayList<>())) {
-            if (!services.isEmpty() && !nbr.getServices().containsAll(services)) continue;
+        for (let nbr of this.flightGraph.get(origin) || []) {
+            if (services.size && !this.containsAllServices(nbr.getServices(), services)) continue;
 
-            if (!visited.contains(nbr.getDestination())) {
+            if (!visited.has(nbr.getDestination())) {
                 visited.add(origin);
-
-                list.add(nbr);
-                searchByCost(nbr.getDestination(), destination, minimumFare - nbr.getFare(), services, visited, list, flights);
-                list.remove(list.size() - 1);
+                list.push(nbr);
+                this.searchByCostRecursive(nbr.getDestination(), destination, minimumFare - nbr.getFare(), services, visited, list, flights);
+                list.pop();
             }
         }
     }
 
-    private OptionalInt getMinimumHops(String origin, String destination, Set<String> services) {
-        String source = "null@" + origin;
+    getMinimumHops(origin, destination, services) {
+        const source = `null@${origin}`;
+        const minHeap = new Map();
+        minHeap.set(source, 0);
+        const hops = new Map();
+        hops.set(source, 0);
 
-        Queue<Map.Entry<String, Integer>> minHeap = new PriorityQueue<>(Map.Entry.comparingByValue());
-        minHeap.offer(new AbstractMap.SimpleEntry<>(source, 0));
+        while (minHeap.size) {
+            const [currentNode, currentHops] = [...minHeap.entries()].shift();
+            const currentDestination = currentNode.split("@")[1];
 
-        Map<String, Integer> fares = new HashMap<>();
-        fares.put(source, 0);
+            if (currentDestination === destination) continue;
 
-        while (!minHeap.isEmpty()) {
-            Map.Entry<String, Integer> currentNode = minHeap.poll();
-            String currentDestination = currentNode.getKey().split("@")[1];
-            int currentFare = currentNode.getValue();
+            for (let nbr of this.flightGraph.get(currentDestination) || []) {
+                if (services.size && !this.containsAllServices(nbr.getServices(), services)) continue;
 
-            if (currentDestination.equals(destination)) continue;
+                const nextDestination = `${nbr.getAirline().getName()}@${nbr.getDestination()}`;
+                const nextHops = currentHops + 1;
 
-            for (Flight nbr : flightGraph.getOrDefault(currentDestination, new ArrayList<>())) {
-                if (!services.isEmpty() && !nbr.getServices().containsAll(services)) continue;
-
-                String nextDestination = nbr.getAirline().getName() + "@" + nbr.getDestination();
-                int nextFare = currentFare + 1;
-
-                if (nextFare < fares.getOrDefault(nextDestination, Integer.MAX_VALUE)) {
-                    fares.put(nextDestination, nextFare);
-                    minHeap.offer(new AbstractMap.SimpleEntry<>(nextDestination, nextFare));
+                if (nextHops < hops.get(nextDestination) || !hops.has(nextDestination)) {
+                    hops.set(nextDestination, nextHops);
+                    minHeap.set(nextDestination, nextHops);
                 }
             }
         }
 
-        return fares.keySet().stream().filter(d -> d.contains(destination)).mapToInt(fares::get).min();
+        return [...hops.keys()].filter(d => d.includes(destination)).map(d => hops.get(d));
     }
 
-    private List<List<Flight>> searchByHops(String origin, String destination, Set<String> services) {
-        OptionalInt minimumHopsOptional = getMinimumHops(origin, destination, services);
-        if (!minimumHopsOptional.isPresent()) return new ArrayList<>();
+    searchByHops(origin, destination, services) {
+        const minimumHops = this.getMinimumHops(origin, destination, services);
+        if (!minimumHops || minimumHops.length === 0) return [];
 
-        List<List<Flight>> flights = new ArrayList<>();
-        searchByHops(origin, destination, minimumHopsOptional.getAsInt(), services, new HashSet<>(), new ArrayList<>(), flights);
+        let flights = [];
+        this.searchByHopsRecursive(origin, destination, minimumHops[0], services, new Set(), [], flights);
 
-        Optional<Double> minFareOptional = flights.stream().map(flightNodes -> flightNodes.stream().mapToDouble(Flight::getFare).sum()).min(Double::compareTo);
-        if (!minFareOptional.isPresent()) return new ArrayList<>();
-
-        double minFare = minFareOptional.get();
-
-        return flights
-                .stream()
-                .filter(flightNodes ->
-                        flightNodes.stream().mapToDouble(Flight::getFare).sum() == minFare).collect(Collectors.toList());
+        const minFare = Math.min(...flights.map(flightNodes => flightNodes.reduce((sum, flight) => sum + flight.getFare(), 0)));
+        return flights.filter(flightNodes => flightNodes.reduce((sum, flight) => sum + flight.getFare(), 0) === minFare);
     }
 
-    private void searchByHops(String origin, String destination, double minimumHops, Set<String> services, Set<String> visited, List<Flight> list, List<List<Flight>> flights) {
-        if (origin.equals(destination) && 0 == minimumHops) {
-            flights.add(new ArrayList<>(list));
+    searchByHopsRecursive(origin, destination, minimumHops, services, visited, list, flights) {
+        if (origin === destination && minimumHops === 0) {
+            flights.push([...list]);
             return;
         }
+
         if (minimumHops <= 0) return;
 
-        for (Flight nbr : flightGraph.getOrDefault(origin, new ArrayList<>())) {
-            if (!services.isEmpty() && !nbr.getServices().containsAll(services)) continue;
+        for (let nbr of this.flightGraph.get(origin) || []) {
+            if (services.size && !this.containsAllServices(nbr.getServices(), services)) continue;
 
-            if (!visited.contains(nbr.getDestination())) {
+            if (!visited.has(nbr.getDestination())) {
                 visited.add(origin);
-
-                list.add(nbr);
-                searchByHops(nbr.getDestination(), destination, minimumHops - 1, services, visited, list, flights);
-                list.remove(list.size() - 1);
+                list.push(nbr);
+                this.searchByHopsRecursive(nbr.getDestination(), destination, minimumHops - 1, services, visited, list, flights);
+                list.pop();
             }
         }
     }
 }
+
+module.exports = FlightSearchService;
