@@ -1,53 +1,26 @@
-package repositories;
+const FlightRepository = require('./FlightRepository');
+const Flight = require('./Flight'); 
 
-import models.Flight;
 
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
+const flightRepo = new FlightRepository();
 
-public class FlightRepository {
-    private static Long ID = 1L;
-    private final Map<Long, Flight> db = new ConcurrentHashMap<>();
-    private final Map<String, List<Flight>> graph = new ConcurrentHashMap<>();
 
-    public Flight save(Flight flight) {
-        flight.setId(ID++);
-        db.put(flight.getId(), flight);
-        return flight;
-    }
+const flight1 = new Flight('Flight101', 'New York', 'London', 500, 'Jet Airways');
+const flight2 = new Flight('Flight102', 'New York', 'Paris', 400, 'Jet Airways');
 
-    public Optional<Flight> find(Flight flight) {
-        return db.values().stream().filter(o -> o.equals(flight)).findFirst();
-    }
 
-    public Optional<Flight> findById(Long id) {
-        return db.values().stream().filter(flight -> flight.getId().equals(id)).findFirst();
-    }
+flightRepo.save(flight1);
+flightRepo.save(flight2);
 
-    public List<Flight> getAllByService(String service) {
-        return db.values().stream().filter(flight -> flight.getServices().contains(service)).collect(Collectors.toList());
-    }
 
-    public void updateGraph(Flight flight) {
-        graph.putIfAbsent(flight.getOrigin(), new ArrayList<>());
+console.log(flightRepo.findById(1)); 
 
-        List<Flight> flights = graph.get(flight.getOrigin());
-        Optional<Flight> flightOptional = flights
-                .stream()
-                .filter(node -> node.getId().equals(flight.getId()))
-                .findFirst();
 
-        if (!flightOptional.isPresent()) {
-            flights.add(flight);
-        }
-    }
+console.log(flightRepo.getAllByService('WiFi')); 
 
-    public Map<String, List<Flight>> getGraph() {
-        Map<String, List<Flight>> immutableGraph = new HashMap<>();
-        for (String key : graph.keySet()) {
-            immutableGraph.put(key, Collections.unmodifiableList(graph.get(key)));
-        }
-        return Collections.unmodifiableMap(immutableGraph);
-    }
-}
+flightRepo.updateGraph(flight1);
+console.log(flightRepo.getGraph()); 
+
+
+const foundFlight = flightRepo.find(flight1);
+console.log(foundFlight); 
