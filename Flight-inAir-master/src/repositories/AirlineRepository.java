@@ -1,22 +1,18 @@
-package repositories;
+const AirlineRepository = require('./AirlineRepository');
+const Airline = require('./Airline'); 
 
-import models.Airline;
 
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
+const repository = new AirlineRepository();
 
-public class AirlineRepository {
-    private static Long ID = 1L;
-    private final Map<Long, Airline> db = new ConcurrentHashMap<>();
 
-    public Airline save(Airline airline) {
-        airline.setId(ID++);
-        db.put(airline.getId(), airline);
-        return airline;
-    }
+const airline1 = new Airline('Jet Airways');
+const airline2 = new Airline('Air India');
 
-    public Optional<Airline> findById(Long airlineId) {
-        return db.values().stream().filter(airline -> airline.getId().equals(airlineId)).findFirst();
-    }
-}
+
+repository.save(airline1);
+repository.save(airline2);
+
+
+console.log(repository.findById(1)); 
+console.log(repository.findById(2)); 
+console.log(repository.findById(3)); 
